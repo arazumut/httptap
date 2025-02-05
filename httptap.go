@@ -108,6 +108,8 @@ func readFromDevice(ctx context.Context, tun *water.Interface, tcpstack *tcpStac
 			continue
 		}
 
+		// if the packet is destined for the subprocess then send it to the subprocess
+
 		if dumpPacketsFromSubprocess {
 			verbose(strings.Repeat("\n", 3))
 			verbose(strings.Repeat("=", 80))

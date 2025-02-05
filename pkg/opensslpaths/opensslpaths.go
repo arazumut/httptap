@@ -1,15 +1,15 @@
 package opensslpaths
 
-// if libcrypto.so can be loaded then these function pointers will be populated
-type libcryptoFuncs struct {
-	X509_get_default_cert_dir      func() string // default cert dir
-	X509_get_default_cert_dir_env  func() string // name of environment variable controlling the above
-	X509_get_default_cert_file     func() string // default cert file
-	X509_get_default_cert_file_env func() string // name of environment variable controlling the above
+// Eğer libcrypto.so yüklenebilirse, bu fonksiyon işaretçileri doldurulacak
+type libcryptoFonksiyonlar struct {
+	X509_get_default_cert_dir      func() string // varsayılan sertifika dizini
+	X509_get_default_cert_dir_env  func() string // yukarıdakini kontrol eden ortam değişkeninin adı
+	X509_get_default_cert_file     func() string // varsayılan sertifika dosyası
+	X509_get_default_cert_file_env func() string // yukarıdakini kontrol eden ortam değişkeninin adı
 }
 
-// Get the default certificate dir configured for openssl, or empty string if openssl is not installed or cannot be loaded
-func DefaultCertFile() string {
+// OpenSSL için yapılandırılmış varsayılan sertifika dosyasını al, eğer OpenSSL yüklü değilse veya yüklenemiyorsa boş string döner
+func VarsayilanSertifikaDosyasi() string {
 	defer recover()
 	if lib := libcrypto(); lib != nil {
 		return lib.X509_get_default_cert_file()
@@ -17,18 +17,17 @@ func DefaultCertFile() string {
 	return ""
 }
 
-// Get the name of the environment variable that controls the default certificate dir, or empty string if openssl is not installed or cannot be loaded
-func DefaultCertFileEnv() string {
+// Varsayılan sertifika dizinini kontrol eden ortam değişkeninin adını al, eğer OpenSSL yüklü değilse veya yüklenemiyorsa boş string döner
+func VarsayilanSertifikaDosyasiEnv() string {
 	defer recover()
 	if lib := libcrypto(); lib != nil {
 		return lib.X509_get_default_cert_file_env()
 	}
 	return ""
-
 }
 
-// Get the default certificate dir configured for openssl, or empty string if openssl is not installed or cannot be loaded
-func DefaultCertDir() string {
+// OpenSSL için yapılandırılmış varsayılan sertifika dizinini al, eğer OpenSSL yüklü değilse veya yüklenemiyorsa boş string döner
+func VarsayilanSertifikaDizini() string {
 	defer recover()
 	if lib := libcrypto(); lib != nil {
 		return lib.X509_get_default_cert_dir()
@@ -36,8 +35,8 @@ func DefaultCertDir() string {
 	return ""
 }
 
-// Get the name of the environment variable that controls the default certificate dir, or empty string if openssl is not installed or cannot be loaded
-func DefaultCertDirEnv() string {
+// Varsayılan sertifika dizinini kontrol eden ortam değişkeninin adını al, eğer OpenSSL yüklü değilse veya yüklenemiyorsa boş string döner
+func VarsayilanSertifikaDiziniEnv() string {
 	defer recover()
 	if lib := libcrypto(); lib != nil {
 		return lib.X509_get_default_cert_dir_env()

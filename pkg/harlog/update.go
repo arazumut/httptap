@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// UpdateEntryWithTimings populates a HAR entry with timings from an HTTP round trip
+// UpdateEntryWithTimings, bir HTTP round trip'ten gelen zamanlamalarla bir HAR girişini doldurur
 func UpdateEntryWithTimings(entry *Entry, trace *TimingTrace) {
 	entry.StartedDateTime = Time(trace.startAt)
 	entry.Time = Duration(trace.endAt.Sub(trace.startAt))
@@ -35,8 +35,8 @@ func UpdateEntryWithTimings(entry *Entry, trace *TimingTrace) {
 	}
 }
 
-// UpdateEntryWithRequest populates a HAR entry with values from an HTTP request. It treats the provided
-// body as the body of the HTTP request and does not read or modify r.Body.
+// UpdateEntryWithRequest, bir HTTP isteğinden gelen değerlerle bir HAR girişini doldurur. Sağlanan
+// gövdeyi HTTP isteğinin gövdesi olarak kabul eder ve r.Body'yi okumaz veya değiştirmez.
 func UpdateEntryWithRequest(entry *Entry, r *http.Request, body []byte) error {
 	bodySize := -1
 	var postData *PostData
@@ -51,7 +51,7 @@ func UpdateEntryWithRequest(entry *Entry, r *http.Request, body []byte) error {
 			Text:     string(body),
 		}
 
-		// ignore missing or malformed mime type here
+		// Eksik veya hatalı mime türünü burada yoksay
 		mediaType, mediaParams, _ := mime.ParseMediaType(mimeType)
 
 		switch mediaType {
@@ -68,10 +68,10 @@ func UpdateEntryWithRequest(entry *Entry, r *http.Request, body []byte) error {
 				}
 			}
 
-		case "multipart/form-data": // consider allowing "multipart/mixed" here too
+		case "multipart/form-data": // "multipart/mixed" türüne de izin vermeyi düşünebilirsiniz
 			boundary, ok := mediaParams["boundary"]
 			if !ok {
-				return fmt.Errorf("got a multipart/form-data request with no boundary in the media type")
+				return fmt.Errorf("boundary içermeyen multipart/form-data isteği alındı")
 			}
 
 			mr := multipart.NewReader(bytes.NewReader(body), boundary)
@@ -113,12 +113,12 @@ func UpdateEntryWithRequest(entry *Entry, r *http.Request, body []byte) error {
 	return nil
 }
 
-// UpdateEntryWithResponse populates a HAR entry with data from an HTTP response. It treats the provided
-// body bytes as the content of the response. It does not read from or modify resp.Body.
+// UpdateEntryWithResponse, bir HTTP yanıtından gelen verilerle bir HAR girişini doldurur. Sağlanan
+// gövde baytlarını yanıtın içeriği olarak kabul eder. resp.Body'den okumaz veya değiştirmez.
 func UpdateEntryWithResponse(entry *Entry, resp *http.Response, body []byte) {
 	mimeType := resp.Header.Get("Content-Type")
 
-	// parse the mime type, and ignore parse errors
+	// mime türünü ayrıştır, ve ayrıştırma hatalarını yoksay
 	mediaType, _, _ := mime.ParseMediaType(mimeType)
 
 	var text string
@@ -138,7 +138,7 @@ func UpdateEntryWithResponse(entry *Entry, resp *http.Response, body []byte) {
 		Cookies:     toHARCookies(resp.Cookies()),
 		Headers:     toHARNVP(resp.Header),
 		Content: &Content{
-			Size:        resp.ContentLength, // TODO 圧縮されている場合のフォロー
+			Size:        resp.ContentLength, // TODO Sıkıştırılmışsa takip et
 			Compression: 0,
 			MimeType:    mimeType,
 			Text:        text,

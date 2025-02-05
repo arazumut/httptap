@@ -1,5 +1,5 @@
-// dialcontext is a program to investigate whether an http request's context is passed through to
-// the DialContext function on a http.Transport
+// dialcontext, bir http isteğinin bağlamının http.Transport üzerindeki DialContext fonksiyonuna
+// geçip geçmediğini araştırmak için bir programdır.
 
 package main
 
@@ -25,11 +25,11 @@ func Main() error {
 	var args struct{}
 	arg.MustParse(&args)
 
-	// first construct an http transport
+	// İlk olarak bir http transport oluştur
 	transport := http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-			log.Printf("at dialcontext, got value %q", ctx.Value(fooKey))
+			log.Printf("dialcontext'te, değer %q alındı", ctx.Value(fooKey))
 			return net.Dial(network, address)
 		},
 		ForceAttemptHTTP2:     true,
@@ -40,25 +40,25 @@ func Main() error {
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 	}
 
-	// now make a context containing a foo key
-	ctx = context.WithValue(ctx, fooKey, "hello dialcontext!")
+	// Şimdi bir foo anahtarı içeren bir bağlam oluştur
+	ctx = context.WithValue(ctx, fooKey, "merhaba dialcontext!")
 
-	// now make an ordinary http request
+	// Şimdi sıradan bir http isteği oluştur
 	req, err := http.NewRequest("GET", "https://www.monasticacademy.org", nil)
 	if err != nil {
 		return err
 	}
 
-	// add the context to the request
+	// İsteğe bağlamı ekle
 	req = req.WithContext(ctx)
 
-	// send the request
+	// İsteği gönder
 	_, err = transport.RoundTrip(req)
 	if err != nil {
 		return err
 	}
 
-	log.Println("done")
+	log.Println("tamamlandı")
 	return nil
 }
 

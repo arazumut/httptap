@@ -1,20 +1,23 @@
 package main
 
 import (
+	"log"
 	"runtime/debug"
 )
 
-func handlePanic() {
+// Panik durumlarını ele alan fonksiyon
+func panikYakala() {
 	if r := recover(); r != nil {
-		errorf("%v", r)
-		errorf(string(debug.Stack()))
+		log.Printf("Panik: %v", r)
+		log.Printf("Yığın izi: %s", debug.Stack())
 	}
 }
 
-func goHandlePanic(f func() error) {
-	defer handlePanic()
+// Bir fonksiyonu panik yakalama ile çalıştıran fonksiyon
+func guvenliCalistir(f func() error) {
+	defer panikYakala()
 	err := f()
 	if err != nil {
-		errorf("a goroutine exited with: %v", err)
+		log.Printf("Bir goroutine hata ile sonlandı: %v", err)
 	}
 }

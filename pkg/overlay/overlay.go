@@ -1,4 +1,4 @@
-// package overlay mounts an overlay filesystem over an existing directory. Can be anywhere and no need for pivot_root.
+// overlay paketi, mevcut bir dizinin üzerine bir overlay dosya sistemi monte eder. pivot_root'a gerek yoktur ve herhangi bir yerde olabilir.
 
 package overlay
 
@@ -10,19 +10,19 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Bakeable stamps itself out onto a temporary directory
+// Bakeable, kendisini geçici bir dizine damgalar
 type Bakeable interface {
 	Bake(dir string) error
 }
 
-// file replaces the contents of a file in the original filesystem with fixed contents
+// file, orijinal dosya sistemindeki bir dosyanın içeriğini sabit içerikle değiştirir
 type file struct {
 	path    string
 	content []byte
 	perm    os.FileMode
 }
 
-// Bake implements Bakeable.Bake for individual files
+// Bake, bireysel dosyalar için Bakeable.Bake'i uygular
 func (f *file) Bake(dir string) error {
 	path := filepath.Join(dir, f.path)
 
@@ -34,74 +34,72 @@ func (f *file) Bake(dir string) error {
 	return os.WriteFile(path, f.content, f.perm)
 }
 
-// File is a file with contents specified by a string
+// File, içeriği bir dize ile belirtilen bir dosyadır
 func File(path string, content []byte) *file {
 	return &file{path: path, content: content, perm: os.ModePerm}
 }
 
-// FilePerm is like File but you can specify the permissions
+// FilePerm, File gibidir ancak izinleri belirtebilirsiniz
 func FilePerm(path string, content []byte, perm os.FileMode) *file {
 	return &file{path: path, content: content, perm: perm}
 }
 
-// Remover holds the location of certain temporary files supporting a pivot_root'ed
-// overlay filesystem. The main purpose of this struct is to clean it up afterwards.
+// Remover, pivot_root edilmiş overlay dosya sistemini destekleyen belirli geçici dosyaların konumunu tutar. Bu yapının ana amacı, sonrasında temizlemektir.
 type Remover struct {
 	tmpdir string
 }
 
-// Remove cleans up the temporary directory created by Pivot
+// Remove, Pivot tarafından oluşturulan geçici dizini temizler
 func (m *Remover) Remove() error {
 	return os.RemoveAll(m.tmpdir)
 }
 
 func Mount(path string, nodes ...Bakeable) (*Remover, error) {
-	// create a temporary directory
+	// geçici bir dizin oluştur
 	tmpdir, err := os.MkdirTemp("", "overlay-*")
 	if err != nil {
-		return nil, fmt.Errorf("error getting current working directory")
+		return nil, fmt.Errorf("geçerli çalışma dizini alınırken hata oluştu")
 	}
 
-	// prepare some paths for the main mount syscall
-	workdir := filepath.Join(tmpdir, "work")   // the overlayfs driver will use this as a working directory
-	layerdir := filepath.Join(tmpdir, "layer") // this is the dir holding the "diff" that will be applied to the root
+	// ana mount syscall için bazı yolları hazırla
+	workdir := filepath.Join(tmpdir, "work")   // overlayfs sürücüsü bunu çalışma dizini olarak kullanacak
+	layerdir := filepath.Join(tmpdir, "layer") // bu, köke uygulanacak "farkı" tutan dizindir
 
-	// all of these directories need to already exist for the syscalls below
+	// aşağıdaki syscalls için bu dizinlerin tümü zaten var olmalıdır
 	for _, dir := range []string{layerdir, workdir} {
 		err = os.MkdirAll(dir, 0777)
 		if err != nil {
-			return nil, fmt.Errorf("error creating directory %v: %w", dir, err)
+			return nil, fmt.Errorf("%v dizini oluşturulurken hata oluştu: %w", dir, err)
 		}
 	}
 
-	// stamp out the layer
+	// katmanı damgala
 	for _, node := range nodes {
 		if err := node.Bake(layerdir); err != nil {
-			return nil, fmt.Errorf("error baking %T%#v: %w", node, node, err)
+			return nil, fmt.Errorf("%T%#v damgalanırken hata oluştu: %w", node, node, err)
 		}
 	}
 
-	// switch to a new mount namespace
+	// yeni bir mount namespace'e geç
 	err = unix.Unshare(unix.CLONE_NEWNS | unix.CLONE_FS)
 	if err != nil {
-		return nil, fmt.Errorf("error unsharing mounts: %w", err)
+		return nil, fmt.Errorf("mount'lar ayrılırken hata oluştu: %w", err)
 	}
 
-	// make the root filesystem in this new namespace private, which prevents the
-	// mount below from leaking into the parent namespace
-	// per the man page, the first, third, and fifth arguments below are ignored
+	// bu yeni namespace'teki kök dosya sistemini özel yap, bu da aşağıdaki mount'un üst namespace'e sızmasını önler
+	// man sayfasına göre, aşağıdaki ilk, üçüncü ve beşinci argümanlar göz ardı edilir
 	err = unix.Mount("ignored", "/", "ignored", unix.MS_PRIVATE|unix.MS_REC, "ignored")
 	if err != nil {
-		return nil, fmt.Errorf("error making root filesystem private")
+		return nil, fmt.Errorf("kök dosya sistemi özel yapılırken hata oluştu")
 	}
 
-	// mount an overlay filesystem; equivalent to:
+	// bir overlay dosya sistemi monte et; eşdeğer:
 	//
 	//   sudo mount -t overlay overlay -olowerdir=<path>,upperdir=<layer>,workdir=<work> <path>
 	mountopts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", path, layerdir, workdir)
 	err = unix.Mount("overlay", path, "overlay", 0, mountopts)
 	if err != nil {
-		return nil, fmt.Errorf("error mounting overlay filesystem at %v (%q): %w", path, mountopts, err)
+		return nil, fmt.Errorf("%v (%q) üzerine overlay dosya sistemi monte edilirken hata oluştu: %w", path, mountopts, err)
 	}
 
 	return &Remover{tmpdir: tmpdir}, nil

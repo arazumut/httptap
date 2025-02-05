@@ -11,49 +11,49 @@ import (
 	"github.com/monasticacademy/httptap/pkg/overlayroot"
 )
 
-func Main() error {
+func Ana() error {
 	var args struct {
-		Command []string `arg:"positional"`
+		Komut []string `arg:"positional"`
 	}
 	arg.MustParse(&args)
 
-	if len(args.Command) == 0 {
-		args.Command = []string{"/bin/sh"}
+	if len(args.Komut) == 0 {
+		args.Komut = []string{"/bin/sh"}
 	}
 
-	// lock this goroutine to a single OS thread because namespaces are thread-local
+	// Bu goroutine'i tek bir OS iş parçacığına kilitle, çünkü ad alanları iş parçacığına özeldir
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	// go to a new mount namespace and overlay the root filesystem in that namespace
+	// Yeni bir bağlama ad alanına git ve bu ad alanında kök dosya sistemini kapla
 	mount, err := overlayroot.Pivot(
-		overlayroot.File("/a/b/test", []byte("hello overlay root\n")),
+		overlayroot.File("/a/b/test", []byte("merhaba kaplama kök\n")),
 	)
 	if err != nil {
-		return fmt.Errorf("error overlaying root filesystem: %w", err)
+		return fmt.Errorf("kök dosya sistemini kaplarken hata: %w", err)
 	}
 	defer mount.Remove()
 
-	// launch a subprocess -- we are already in the namespace so no need for CLONE_NS here
-	cmd := exec.Command(args.Command[0])
-	cmd.Args = args.Command
+	// Bir alt süreç başlat -- zaten ad alanındayız, bu yüzden burada CLONE_NS gerekmez
+	cmd := exec.Command(args.Komut[0])
+	cmd.Args = args.Komut
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = []string{"PS1=MOUNTNAMESPACE # "}
 	err = cmd.Start()
 	if err != nil {
-		return fmt.Errorf("error starting subprocess: %w", err)
+		return fmt.Errorf("alt süreci başlatırken hata: %w", err)
 	}
 
-	// wait for subprocess completion
+	// Alt sürecin tamamlanmasını bekle
 	err = cmd.Wait()
 	if err != nil {
 		exitError, isExitError := err.(*exec.ExitError)
 		if isExitError {
-			return fmt.Errorf("subprocess exited with code %d", exitError.ExitCode())
+			return fmt.Errorf("alt süreç %d kodu ile çıktı", exitError.ExitCode())
 		} else {
-			return fmt.Errorf("error running subprocess: %v", err)
+			return fmt.Errorf("alt süreci çalıştırırken hata: %v", err)
 		}
 	}
 	return nil
@@ -62,7 +62,7 @@ func Main() error {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := Ana()
 	if err != nil {
 		log.Fatal(err)
 	}

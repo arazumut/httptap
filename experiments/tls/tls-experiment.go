@@ -16,10 +16,11 @@ import (
 	"github.com/joemiller/certin"
 )
 
-func writeCertFile(cert []byte, path string) error {
+// Sertifika dosyasını yazan fonksiyon
+func sertifikaDosyasiniYaz(cert []byte, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("error opening pem file for writing: %w", err)
+		return fmt.Errorf("PEM dosyasını yazmak için açarken hata: %w", err)
 	}
 	defer f.Close()
 
@@ -28,14 +29,14 @@ func writeCertFile(cert []byte, path string) error {
 		Bytes: cert,
 	})
 	if err != nil {
-		return fmt.Errorf("error encoding CA to pem: %w", err)
+		return fmt.Errorf("CA'yı PEM'e kodlarken hata: %w", err)
 	}
 
-	log.Printf("created %v", path)
+	log.Printf("%v oluşturuldu", path)
 	return nil
 }
 
-func Main() error {
+func Ana() error {
 	var args struct {
 		Port string `default:":19870"`
 	}
@@ -43,46 +44,32 @@ func Main() error {
 
 	root, err := certin.NewCert(nil, certin.Request{CN: "root CA", IsCA: true})
 	if err != nil {
-		return fmt.Errorf("error creating root CA: %w", err)
+		return fmt.Errorf("root CA oluşturulurken hata: %w", err)
 	}
 
-	// write the certificate authority to a temporary file
-	err = writeCertFile(root.Certificate.Raw, "ca.crt")
+	// Sertifika otoritesini geçici bir dosyaya yaz
+	err = sertifikaDosyasiniYaz(root.Certificate.Raw, "ca.crt")
 	if err != nil {
 		return err
 	}
 
-	// leaf, err := certin.NewCert(root, certin.Request{
-	// 	CN:   "example.com",
-	// 	SANs: []string{"example.com", "www.example.com", "127.0.0.1"},
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("error creating leaf certificate: %w", err)
-	// }
-
-	// write the server certificate to a temporary file
-	// err = writeCertFile(leaf.Certificate.Raw, "certificate.crt")
-	// if err != nil {
-	// 	return err
-	// }
-
-	// start an HTTP server
-	const plaintext = "hello httptap world"
+	// HTTP sunucusunu başlat
+	const metin = "merhaba httptap dünyası"
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, plaintext)
+		fmt.Fprintln(w, metin)
 	}))
 	server.TLS = &tls.Config{
 		GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			log.Printf("got challenge for %q", hello.ServerName)
+			log.Printf("%q için challenge alındı", hello.ServerName)
 			onthefly, err := certin.NewCert(root, certin.Request{CN: hello.ServerName})
 			if err != nil {
-				log.Println("error creating cert: %w", err)
-				return nil, fmt.Errorf("error creating on-the-fly certificate for %q: %w", hello.ServerName, err)
+				log.Println("sertifika oluşturulurken hata: %w", err)
+				return nil, fmt.Errorf("%q için anında sertifika oluşturulurken hata: %w", hello.ServerName, err)
 			}
 
-			err = writeCertFile(onthefly.Certificate.Raw, "certificate.crt")
+			err = sertifikaDosyasiniYaz(onthefly.Certificate.Raw, "certificate.crt")
 			if err != nil {
-				log.Printf("error writing on-the-fly certificate to file: %v, ignoring", err)
+				log.Printf("anında sertifika dosyasına yazılırken hata: %v, göz ardı ediliyor", err)
 			}
 
 			tlscert := onthefly.TLSCertificate()
@@ -91,47 +78,47 @@ func Main() error {
 	}
 	server.Listener, err = net.Listen("tcp", args.Port)
 	if err != nil {
-		return fmt.Errorf("unable to listen on %v: %w", args.Port, err)
+		return fmt.Errorf("%v üzerinde dinlenemiyor: %w", args.Port, err)
 	}
 
 	server.StartTLS()
 	defer server.Close()
 
-	// communicate with the server using an http.Client configured to trust our CA
+	// Sunucu ile iletişim kurmak için CA'ya güvenen bir http.Client yapılandır
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:    root.CertPool(),
 			ServerName: "example.com",
 		},
 	}
-	http := http.Client{
+	httpClient := http.Client{
 		Transport: transport,
 	}
 
 	url := fmt.Sprintf("https://127.0.0.1%v/", args.Port)
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
 
-	// verify the response
+	// Yanıtı doğrula
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	body := strings.TrimSpace(string(respBodyBytes[:]))
-	if body != plaintext {
-		return fmt.Errorf("mismatch, got: %q", body)
+	if body != metin {
+		return fmt.Errorf("uyumsuzluk, alınan: %q", body)
 	}
 
-	log.Printf("verified connection works locally, now listening at %v ...", server.URL)
+	log.Printf("Bağlantının yerel olarak çalıştığı doğrulandı, şimdi %v üzerinde dinleniyor ...", server.URL)
 	select {}
 }
 
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := Ana()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -6,64 +6,60 @@ import (
 	"sync"
 )
 
-// match a listen pattern to an address string of the form HOST:PORT
-func patternMatches(pattern string, addr net.Addr) bool {
-	if pattern == "*" {
+// Bir dinleme desenini HOST:PORT biçimindeki bir adres dizesiyle eşleştirir
+func desenEşleşiyorMu(desen string, addr net.Addr) bool {
+	if desen == "*" {
 		return true
 	}
-	if strings.HasPrefix(pattern, ":") && strings.HasSuffix(addr.String(), pattern) {
+	if strings.HasPrefix(desen, ":") && strings.HasSuffix(addr.String(), desen) {
 		return true
 	}
 	return false
 }
 
-// mux dispatches network connections to listeners according to patterns
+// mux, ağ bağlantılarını desenlere göre dinleyicilere yönlendirir
 type mux struct {
 	mu          sync.Mutex
 	tcpHandlers []*tcpMuxEntry
 	udpHandlers []*udpMuxEntry
 }
 
-// tcpHandlerFunc is a function that receives TCP connections
+// tcpHandlerFunc, TCP bağlantılarını alan bir işlevdir
 type tcpHandlerFunc func(net.Conn)
 
-// tcpHandlerFunc is a function that receives TCP connection requests and can choose
-// whether to accept or reject them.
+// tcpRequestHandlerFunc, TCP bağlantı isteklerini alan ve kabul edip etmeme seçeneğine sahip bir işlevdir.
 type tcpRequestHandlerFunc func(TCPRequest)
 
-// tcpMuxEntry is a pattern and corresponding handler, for use in the mux table for the tcp stack
+// tcpMuxEntry, tcp yığını için mux tablosunda kullanılmak üzere bir desen ve ilgili işleyicidir
 type tcpMuxEntry struct {
-	pattern string
+	desen   string
 	handler tcpRequestHandlerFunc
 }
 
-// udpHandlerFunc is a function that receives UDP packets. Each call to w.Write
-// will send a UDP packet back to the subprocess that looks as if it comes from
-// the destination to which the original packet was sent. No matter what you put in
-// the source or destination address, the
+// udpHandlerFunc, UDP paketlerini alan bir işlevdir. w.Write çağrısının her biri, orijinal paketin gönderildiği hedeften geliyormuş gibi görünen bir UDP paketi gönderir.
 type udpHandlerFunc func(w udpResponder, packet *udpPacket)
 
-// udpMuxEntry is a pattern and corresponding handler, for use in the mux table for the udp stack
+// udpMuxEntry, udp yığını için mux tablosunda kullanılmak üzere bir desen ve ilgili işleyicidir
 type udpMuxEntry struct {
 	handler udpHandlerFunc
-	pattern string
+	desen   string
 }
 
-// ListenTCP returns a net.Listener that intercepts connections according to a filter pattern.
+// ListenTCP, bir filtre desenine göre bağlantıları kesen bir net.Listener döndürür.
 //
-// Pattern can a hostname, a :port, a hostname:port, or "*" for everything". For example:
+// Desen bir ana bilgisayar adı, bir :port, bir ana bilgisayar adı:port veya "*" her şey için olabilir. Örneğin:
 //   - "example.com"
 //   - "example.com:80"
 //   - ":80"
 //   - "*"
 //
-// Later this will be like net.ListenTCP
-func (s *mux) ListenTCP(pattern string) net.Listener {
+// Daha sonra bu net.ListenTCP gibi olacak
+func (s *mux) ListenTCP(desen string) net.Listener {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	listener := tcpListener{pattern: pattern, connections: make(chan net.Conn, 64)}
-	s.HandleTCPRequest(pattern, func(r TCPRequest) {
+	listener := tcpListener{desen: desen, connections: make(chan net.Conn, 64)}
+	s.HandleTCPRequest(desen, func(r TCPRequest) {
 		conn, err := r.Accept()
 		if err != nil {
 			return
@@ -73,122 +69,116 @@ func (s *mux) ListenTCP(pattern string) net.Listener {
 	return &listener
 }
 
-// HandleTCP register a handler to be called each time a new connection is intercepted matching the
-// given filter pattern.
+// HandleTCP, verilen filtre desenine uyan her yeni bağlantı kesildiğinde çağrılacak bir işleyici kaydeder.
 //
-// Pattern can a hostname, a :port, a hostname:port, or "*" for everything". For example:
+// Desen bir ana bilgisayar adı, bir :port, bir ana bilgisayar adı:port veya "*" her şey için olabilir. Örneğin:
 //   - "example.com"
 //   - "example.com:80"
 //   - ":80"
 //   - "*"
-func (s *mux) HandleTCP(pattern string, handler tcpHandlerFunc) {
-	s.HandleTCPRequest(pattern, func(r TCPRequest) {
+func (s *mux) HandleTCP(desen string, handler tcpHandlerFunc) {
+	s.HandleTCPRequest(desen, func(r TCPRequest) {
 		conn, err := r.Accept()
 		if err != nil {
-			errorf("error accepting connection: %v", err)
+			errorf("bağlantı kabul edilirken hata: %v", err)
 			return
 		}
 		handler(conn)
 	})
 }
 
-// HandleTCPRequest register a handler to be called each time a new connection is intercepted matching the
-// given filter pattern. Unlike HandleTCP, the handler can control whether the connection is accepted or
-// rejected, which means replying with a SYN+ACK or SYN+RST respectively.
+// HandleTCPRequest, verilen filtre desenine uyan her yeni bağlantı kesildiğinde çağrılacak bir işleyici kaydeder. HandleTCP'den farklı olarak, işleyici bağlantının kabul edilip edilmeyeceğini kontrol edebilir, bu da SYN+ACK veya SYN+RST ile yanıt vermek anlamına gelir.
 //
-// Pattern can a hostname, a :port, a hostname:port, or "*" for everything". For example:
+// Desen bir ana bilgisayar adı, bir :port, bir ana bilgisayar adı:port veya "*" her şey için olabilir. Örneğin:
 //   - "example.com"
 //   - "example.com:80"
 //   - ":80"
 //   - "*"
-func (s *mux) HandleTCPRequest(pattern string, handler tcpRequestHandlerFunc) {
+func (s *mux) HandleTCPRequest(desen string, handler tcpRequestHandlerFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.tcpHandlers = append(s.tcpHandlers, &tcpMuxEntry{pattern: pattern, handler: handler})
+	s.tcpHandlers = append(s.tcpHandlers, &tcpMuxEntry{desen: desen, handler: handler})
 }
 
-// HandleUDP registers a handler for UDP packets according to destination IP and/or por
+// HandleUDP, hedef IP ve/veya porta göre UDP paketleri için bir işleyici kaydeder
 //
-// Pattern can a hostname, a port, a hostname:port, or "*" for everything". Ports are prepended
-// with colons. Valid patterns are:
+// Desen bir ana bilgisayar adı, bir port, bir ana bilgisayar adı:port veya "*" her şey için olabilir. Portlar iki nokta üst üste ile başlar. Geçerli desenler:
 //   - "example.com"
 //   - "example.com:80"
 //   - ":80"
 //   - "*"
 //
-// Later this will be like net.Listen
-func (s *mux) HandleUDP(pattern string, handler udpHandlerFunc) {
+// Daha sonra bu net.Listen gibi olacak
+func (s *mux) HandleUDP(desen string, handler udpHandlerFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.udpHandlers = append(s.udpHandlers, &udpMuxEntry{pattern: pattern, handler: handler})
+	s.udpHandlers = append(s.udpHandlers, &udpMuxEntry{desen: desen, handler: handler})
 }
 
-// notifyTCP is called when a new stream is created. It finds the first listener
-// that will accept the given stream. It never blocks.
+// notifyTCP, yeni bir akış oluşturulduğunda çağrılır. Verilen akışı kabul edecek ilk dinleyiciyi bulur. Asla engellemez.
 func (s *mux) notifyTCP(req TCPRequest) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	for _, entry := range s.tcpHandlers {
-		if patternMatches(entry.pattern, req.LocalAddr()) {
+		if desenEşleşiyorMu(entry.desen, req.LocalAddr()) {
 			go entry.handler(req)
 			return
 		}
 	}
 
-	verbosef("nobody listening for tcp to %v, dropping", req.LocalAddr())
+	verbosef("tcp için %v'ye kimse dinlemiyor, düşüyor", req.LocalAddr())
 }
 
-// notifyUDP is called when a new packet arrives. It finds the first handler
-// with a pattern that matches the packet and delivers the packet to it
+// notifyUDP, yeni bir paket geldiğinde çağrılır. Paketi eşleşen bir desene sahip ilk işleyiciyi bulur ve paketi ona teslim eder
 func (s *mux) notifyUDP(w udpResponder, packet *udpPacket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	for _, entry := range s.udpHandlers {
-		if patternMatches(entry.pattern, packet.dst) {
+		if desenEşleşiyorMu(entry.desen, packet.dst) {
 			go entry.handler(w, packet)
 			return
 		}
 	}
 
-	verbosef("nobody listening for udp to %v, dropping!", packet.dst)
+	verbosef("udp için %v'ye kimse dinlemiyor, düşüyor!", packet.dst)
 }
 
-// udpResponder is the interface for writing back UDP packets
+// udpResponder, UDP paketlerini geri yazmak için arayüzdür
 type udpResponder interface {
-	// write a UDP packet back to the subprocess
+	// alt sürece bir UDP paketi geri yaz
 	Write(payload []byte) (n int, err error)
 }
 
-// tcpListener implements net.Listener for connections dispatched by a mux
+// tcpListener, bir mux tarafından yönlendirilen bağlantılar için net.Listener uygular
 type tcpListener struct {
-	pattern     string
+	desen       string
 	connections chan net.Conn
 }
 
-// Accept accepts an intercepted connection. This implements net.Listener.Accept
+// Accept, kesilen bir bağlantıyı kabul eder. Bu, net.Listener.Accept'i uygular
 func (l *tcpListener) Accept() (net.Conn, error) {
 	stream := <-l.connections
 	if stream == nil {
-		// this means the channel is closed, which means the tcpStack was shut down
+		// bu, kanalın kapalı olduğu anlamına gelir, bu da tcpStack'in kapatıldığı anlamına gelir
 		return nil, net.ErrClosed
 	}
 	return stream, nil
 }
 
-// for net.Listener interface
+// net.Listener arayüzü için
 func (l *tcpListener) Close() error {
-	// TODO: unregister from the stack, then close(l.connections)
-	verbose("tcpListener.Close() not implemented, ignoring")
+	// TODO: yığından kaydını sil, sonra close(l.connections)
+	verbose("tcpListener.Close() uygulanmadı, göz ardı ediliyor")
 	return nil
 }
 
-// for net.Listener interface, returns our side of the connection
+// net.Listener arayüzü için, bağlantımızın tarafını döndürür
 func (l *tcpListener) Addr() net.Addr {
-	verbose("tcpListener.Addr() was called, returning bogus address 0.0.0.0:0")
-	// in truth we do not have a real address -- we listen for anything going anywhere
+	verbose("tcpListener.Addr() çağrıldı, sahte adres 0.0.0.0:0 döndürülüyor")
+	// gerçekte gerçek bir adresimiz yok -- herhangi bir yere giden her şeyi dinliyoruz
 	return &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 0}
 }

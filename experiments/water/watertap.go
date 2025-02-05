@@ -9,38 +9,38 @@ import (
 	"github.com/songgao/water"
 )
 
-func Main() error {
-	var args struct {
-		Device string `default:"httptap"`
+func Ana() error {
+	var argumanlar struct {
+		Cihaz string `default:"httptap"`
 	}
-	arg.MustParse(&args)
+	arg.MustParse(&argumanlar)
 
-	config := water.Config{
+	konfig := water.Config{
 		DeviceType: water.TAP,
 		PlatformSpecificParams: water.PlatformSpecificParams{
-			Name: args.Device,
+			Name: argumanlar.Cihaz,
 		},
 	}
 
-	ifce, err := water.New(config)
+	ifce, err := water.New(konfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var frame ethernet.Frame
+	var cerceve ethernet.Frame
 
-	log.Printf("listening on new device %q...", args.Device)
+	log.Printf("Yeni cihaz %q üzerinde dinleniyor...", argumanlar.Cihaz)
 
 	for {
-		frame.Resize(1500)
-		n, err := ifce.Read([]byte(frame))
+		cerceve.Resize(1500)
+		n, err := ifce.Read([]byte(cerceve))
 		if err != nil {
 			log.Fatal(err)
 		}
-		frame = frame[:n]
-		log.Printf("Dst: %s\n", frame.Destination())
-		log.Printf("Src: %s\n", frame.Source())
-		log.Printf("Ethertype: % x\n", frame.Ethertype())
-		log.Printf("Payload: % x\n", frame.Payload())
+		cerceve = cerceve[:n]
+		log.Printf("Hedef: %s\n", cerceve.Destination())
+		log.Printf("Kaynak: %s\n", cerceve.Source())
+		log.Printf("Ethertype: % x\n", cerceve.Ethertype())
+		log.Printf("Yük: % x\n", cerceve.Payload())
 	}
 
 }
@@ -48,7 +48,7 @@ func Main() error {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := Ana()
 	if err != nil {
 		log.Fatal(err)
 	}

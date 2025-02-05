@@ -12,14 +12,14 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-func Main() error {
+func AnaFonksiyon() error {
 	var args struct {
-		Device string         `default:"lo"`
-		Port   layers.UDPPort `default:"9000"`
+		Cihaz string         `default:"lo"`
+		Port  layers.UDPPort `default:"9000"`
 	}
 	arg.MustParse(&args)
 
-	handle, err := pcap.OpenLive(args.Device, 1500, false, pcap.BlockForever)
+	handle, err := pcap.OpenLive(args.Cihaz, 1500, false, pcap.BlockForever)
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func Main() error {
 	}
 	_ = eth
 
-	// Used for loopback interface
+	// Loopback arayüzü için kullanılır
 	lo := layers.Loopback{
 		Family: layers.ProtocolFamilyIPv4,
 	}
@@ -54,7 +54,7 @@ func Main() error {
 		return err
 	}
 
-	payload := []byte("hello low-level networking!\n")
+	payload := []byte("merhaba düşük seviyeli ağ!\n")
 
 	options := gopacket.SerializeOptions{
 		ComputeChecksums: true,
@@ -69,15 +69,15 @@ func Main() error {
 		&udp,
 		gopacket.Payload(payload),
 	); err != nil {
-		return fmt.Errorf("error serializing packet: %w", err)
+		return fmt.Errorf("paket serileştirilirken hata: %w", err)
 	}
-	outgoingPacket := buffer.Bytes()
+	gidenPaket := buffer.Bytes()
 
-	if err = handle.WritePacketData(outgoingPacket); err != nil {
-		return fmt.Errorf("error sending packet: %w", err)
+	if err = handle.WritePacketData(gidenPaket); err != nil {
+		return fmt.Errorf("paket gönderilirken hata: %w", err)
 	}
 
-	log.Println("done")
+	log.Println("işlem tamam")
 
 	return nil
 }
@@ -85,7 +85,7 @@ func Main() error {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := AnaFonksiyon()
 	if err != nil {
 		log.Fatal(err)
 	}

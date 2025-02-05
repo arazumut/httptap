@@ -10,9 +10,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func Main() error {
+func Ana() error {
 	var args struct {
-		Command []string `arg:"positional"`
+		Komut []string `arg:"positional"`
 	}
 	arg.MustParse(&args)
 
@@ -21,21 +21,21 @@ func Main() error {
 		return err
 	}
 
-	lowerdir := filepath.Join(cwd, "lower")
-	upperdir := filepath.Join(cwd, "upper")
-	workdir := filepath.Join(cwd, "work")
-	mergedir := filepath.Join(cwd, "merged")
+	altDizin := filepath.Join(cwd, "alt")
+	ustDizin := filepath.Join(cwd, "ust")
+	calismaDizin := filepath.Join(cwd, "calisma")
+	birlesikDizin := filepath.Join(cwd, "birlesik")
 
-	for _, dir := range []string{lowerdir, upperdir, workdir, mergedir} {
+	for _, dir := range []string{altDizin, ustDizin, calismaDizin, birlesikDizin} {
 		_ = os.MkdirAll(dir, os.ModeDir)
 	}
 
-	// mount an overlay filesystem
+	// bir overlay dosya sistemi bağla
 	// sudo mount -t overlay overlay -olowerdir=$(pwd)/lower,upperdir=$(pwd)/upper,workdir=$(pwd)/work $(pwd)/merged
-	mountopts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", lowerdir, upperdir, workdir)
-	err = unix.Mount("overlay", mergedir, "overlay", 0, mountopts)
+	baglantiSecenekleri := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", altDizin, ustDizin, calismaDizin)
+	err = unix.Mount("overlay", birlesikDizin, "overlay", 0, baglantiSecenekleri)
 	if err != nil {
-		return fmt.Errorf("error mounting overlay filesystem: %w", err)
+		return fmt.Errorf("overlay dosya sistemi bağlanırken hata oluştu: %w", err)
 	}
 
 	return nil
@@ -44,7 +44,7 @@ func Main() error {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := Ana()
 	if err != nil {
 		log.Fatal(err)
 	}

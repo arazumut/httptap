@@ -10,26 +10,26 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
-func Main() error {
-	var args struct {
+func Ana() error {
+	var argumanlar struct {
 		Host string `arg:"positional,required"`
 	}
-	arg.MustParse(&args)
+	arg.MustParse(&argumanlar)
 
 	ctx := context.Background()
-	ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", args.Host)
-	if err != nil {
-		return fmt.Errorf("the default resolver said: %w", err)
+	ipler, hata := net.DefaultResolver.LookupIP(ctx, "ip4", argumanlar.Host)
+	if hata != nil {
+		return fmt.Errorf("varsayılan çözücü dedi ki: %w", hata)
 	}
-	log.Println(ips)
+	log.Println(ipler)
 	return nil
 }
 
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
-	if err != nil {
-		log.Fatal(err)
+	hata := Ana()
+	if hata != nil {
+		log.Fatal(hata)
 	}
 }

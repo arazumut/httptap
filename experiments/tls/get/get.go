@@ -14,58 +14,58 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
-func Main() error {
-	var args struct {
-		Addr     string `arg:"positional,required"`
-		Hostname string `arg:"positional,required"`
+func AnaFonksiyon() error {
+	var argumanlar struct {
+		Adres   string `arg:"positional,required"`
+		HostAdi string `arg:"positional,required"`
 	}
-	arg.MustParse(&args)
+	arg.MustParse(&argumanlar)
 
-	// dial the server
-	conn, err := net.Dial("tcp", args.Addr)
+	// Sunucuya bağlan
+	baglanti, err := net.Dial("tcp", argumanlar.Adres)
 	if err != nil {
-		return fmt.Errorf("error dialing server: %w", err)
+		return fmt.Errorf("sunucuya bağlanırken hata: %w", err)
 	}
 
-	tlsconn := tls.Client(conn, &tls.Config{ServerName: args.Hostname})
+	tlsBaglanti := tls.Client(baglanti, &tls.Config{ServerName: argumanlar.HostAdi})
 
-	err = tlsconn.Handshake()
+	err = tlsBaglanti.Handshake()
 	if err != nil {
-		return fmt.Errorf("tls handshake failed: %w", err)
+		return fmt.Errorf("tls el sıkışması başarısız: %w", err)
 	}
 
-	err = tlsconn.VerifyHostname(args.Hostname)
+	err = tlsBaglanti.VerifyHostname(argumanlar.HostAdi)
 	if err != nil {
-		return fmt.Errorf("tls hostname not verified: %w", err)
+		return fmt.Errorf("tls host adı doğrulanamadı: %w", err)
 	}
 
-	// create http request
-	req, err := http.NewRequest("GET", "https://"+args.Hostname, nil)
+	// HTTP isteği oluştur
+	istek, err := http.NewRequest("GET", "https://"+argumanlar.HostAdi, nil)
 	if err != nil {
 		return err
 	}
 
-	// write the request to the TLS connection
-	err = req.Write(tlsconn)
+	// İsteği TLS bağlantısına yaz
+	err = istek.Write(tlsBaglanti)
 	if err != nil {
-		return fmt.Errorf("error sending http request over tls: %w", err)
+		return fmt.Errorf("tls üzerinden http isteği gönderilirken hata: %w", err)
 	}
 
-	// read the response from the TLS connection
-	resp, err := http.ReadResponse(bufio.NewReader(tlsconn), req)
+	// TLS bağlantısından yanıtı oku
+	yanit, err := http.ReadResponse(bufio.NewReader(tlsBaglanti), istek)
 	if err != nil {
-		return fmt.Errorf("error reading http response over tls: %w", err)
+		return fmt.Errorf("tls üzerinden http yanıtı okunurken hata: %w", err)
 	}
-	defer resp.Body.Close()
+	defer yanit.Body.Close()
 
-	// read the whole body
-	body, err := io.ReadAll(resp.Body)
+	// Tüm gövdeyi oku
+	govde, err := io.ReadAll(yanit.Body)
 	if err != nil {
-		return fmt.Errorf("error reading http body over tls: %w", err)
+		return fmt.Errorf("tls üzerinden http gövdesi okunurken hata: %w", err)
 	}
 
-	// log the result
-	log.Println(strings.TrimSpace(string(body)))
+	// Sonucu logla
+	log.Println(strings.TrimSpace(string(govde)))
 
 	return nil
 }
@@ -73,7 +73,7 @@ func Main() error {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := AnaFonksiyon()
 	if err != nil {
 		log.Fatal(err)
 	}

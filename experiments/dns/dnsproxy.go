@@ -11,60 +11,60 @@ import (
 	"github.com/miekg/dns"
 )
 
-const upstreamDNS = "1.1.1.1:53" // TODO: get from resolv.conf and nsswitch.conf
+const upstreamDNS = "1.1.1.1:53" // TODO: resolv.conf ve nsswitch.conf dosyalarından al
 
-// handle resolves IPv4 hosts according to net.DefaultResolver
+// handle fonksiyonu IPv4 hostlarını net.DefaultResolver kullanarak çözer
 
 func handle(requestMsg *dns.Msg) ([]dns.RR, error) {
 	if len(requestMsg.Question) == 0 {
-		return nil, nil // this means no answer, no error, which is fine
+		return nil, nil // bu, cevap yok, hata yok demektir, bu da sorun değil
 	}
 
-	question := requestMsg.Question[0]
-	log.Printf("got dns request for %v", question.Name)
+	soru := requestMsg.Question[0]
+	log.Printf("dns isteği alındı: %v", soru.Name)
 
 	ctx := context.Background()
 
-	// handle the request ourselves
-	switch question.Qtype {
+	// isteği kendimiz işleyelim
+	switch soru.Qtype {
 	case dns.TypeA:
-		ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", question.Name)
+		ipler, err := net.DefaultResolver.LookupIP(ctx, "ip4", soru.Name)
 		if err != nil {
-			return nil, fmt.Errorf("the default resolver said: %w", err)
+			return nil, fmt.Errorf("varsayılan çözücü dedi ki: %w", err)
 		}
 
 		var rrs []dns.RR
-		for _, ip := range ips {
-			rrline := fmt.Sprintf("%s A %s", question.Name, ip)
+		for _, ip := range ipler {
+			rrline := fmt.Sprintf("%s A %s", soru.Name, ip)
 			rr, err := dns.NewRR(rrline)
 			if err != nil {
-				return nil, fmt.Errorf("error constructing rr: %w", err)
+				return nil, fmt.Errorf("rr oluşturulurken hata: %w", err)
 			}
 			rrs = append(rrs, rr)
 		}
 		return rrs, nil
 	}
 
-	log.Println("proxying the request...")
+	log.Println("istek proxyleniyor...")
 
-	// proxy the request to another server
+	// isteği başka bir sunucuya proxyle
 	queryMsg := new(dns.Msg)
 	requestMsg.CopyTo(queryMsg)
-	queryMsg.Question = []dns.Question{question}
+	queryMsg.Question = []dns.Question{soru}
 
 	dnsClient := new(dns.Client)
 	dnsClient.Net = "udp"
-	response, _, err := dnsClient.Exchange(queryMsg, upstreamDNS)
+	cevap, _, err := dnsClient.Exchange(queryMsg, upstreamDNS)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("got answer from upstream dns server with %d answers", len(response.Answer))
+	log.Printf("upstream dns sunucusundan %d cevap alındı", len(cevap.Answer))
 
-	if len(response.Answer) > 0 {
-		return response.Answer, nil
+	if len(cevap.Answer) > 0 {
+		return cevap.Answer, nil
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("bulunamadı")
 }
 
 func Main() error {
@@ -78,8 +78,8 @@ func Main() error {
 		case dns.OpcodeQuery:
 			rrs, err := handle(req)
 			if err != nil {
-				log.Printf("dns failed for %s with error: %v, continuing...", req, err.Error())
-				// do not abort here, continue on
+				log.Printf("dns başarısız oldu: %s, hata: %v, devam ediliyor...", req, err.Error())
+				// burada durma, devam et
 			}
 
 			resp := new(dns.Msg)
@@ -91,7 +91,7 @@ func Main() error {
 
 	server := &dns.Server{Addr: args.Port, Net: "udp"}
 	server.ListenAndServe()
-	log.Printf("listening on %v...", server.Addr)
+	log.Printf("dinleniyor: %v...", server.Addr)
 	return server.ListenAndServe()
 }
 

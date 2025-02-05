@@ -7,17 +7,17 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"sync"
-	"time"
+	"time"1
 )
 
 var _ http.RoundTripper = (*Transport)(nil)
 
-// Transport is collecting http request/response log by HAR format.
+// Transport, HAR formatında HTTP istek/yanıt loglarını toplar.
 type Transport struct {
-	// next Transport. if nil, use http.DefaultTransport.
+	// Bir sonraki Transport. Eğer nil ise, http.DefaultTransport kullanılır.
 	Transport http.RoundTripper
-	// unusual (not network oriented) error occurred, handle error by this function.
-	// if nil, emit error log by log package, and ignore it.
+	// Olağandışı (ağ ile ilgili olmayan) bir hata oluştuğunda, bu fonksiyonla hatayı ele alır.
+	// Eğer nil ise, log paketi ile hata logu oluşturur ve hatayı görmezden gelir.
 	UnusualError func(err error) error
 
 	har   *HARContainer
@@ -46,14 +46,14 @@ func (h *Transport) init() {
 	}
 }
 
-// HAR returns HAR format log data.
+// HAR, HAR formatında log verilerini döner.
 func (h *Transport) HAR() *HARContainer {
 	h.init()
 	return h.har
 }
 
-// RoundTrip executes a single HTTP transaction, returning
-// a Response for the provided Request.
+// RoundTrip, tek bir HTTP işlemi gerçekleştirir ve
+// sağlanan İstek için bir Yanıt döner.
 func (h *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	h.init()
 
@@ -82,11 +82,11 @@ func (h *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
-	// create a tracer to record timestamps of certain events internal to the HTTP stack
+	// HTTP yığınına içsel belirli olayların zaman damgalarını kaydetmek için bir izleyici oluştur
 	timings, tracer := NewTimingTrace()
 	r = r.WithContext(httptrace.WithClientTrace(r.Context(), tracer))
 
-	// do the HTTP roundtrip
+	// HTTP roundtrip işlemini gerçekleştir
 	resp, realErr := baseRoundTripper.RoundTrip(r)
 
 	err = nil

@@ -9,26 +9,26 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 )
 
-// WritePEM writes an x509 certificate to a PEM file
-func WritePEM(path string, certificate *x509.Certificate) error {
-	f, err := os.Create(path)
+// WritePEM bir x509 sertifikasını PEM dosyasına yazar
+func WritePEM(dosyaYolu string, sertifika *x509.Certificate) error {
+	dosya, err := os.Create(dosyaYolu)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer dosya.Close()
 
-	return pem.Encode(f, &pem.Block{
+	return pem.Encode(dosya, &pem.Block{
 		Type:  "CERTIFICATE",
-		Bytes: certificate.Raw,
+		Bytes: sertifika.Raw,
 	})
 }
 
-// WritePKCS12 writes an x509 certificate to PKCS12 file
-func WritePKCS12(path string, certificate *x509.Certificate) error {
-	truststore, err := pkcs12.Passwordless.EncodeTrustStore([]*x509.Certificate{certificate}, "")
+// WritePKCS12 bir x509 sertifikasını PKCS12 dosyasına yazar
+func WritePKCS12(dosyaYolu string, sertifika *x509.Certificate) error {
+	truststore, err := pkcs12.EncodeTrustStore([]*x509.Certificate{sertifika}, "")
 	if err != nil {
-		return fmt.Errorf("error encoding certificate authority in pkcs12 format: %w", err)
+		return fmt.Errorf("sertifika otoritesini pkcs12 formatında kodlarken hata: %w", err)
 	}
 
-	return os.WriteFile(path, truststore, os.ModePerm)
+	return os.WriteFile(dosyaYolu, truststore, os.ModePerm)
 }

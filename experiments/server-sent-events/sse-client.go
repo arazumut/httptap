@@ -8,24 +8,25 @@ import (
 	"github.com/r3labs/sse"
 )
 
+// Main fonksiyonu, SSE (Server-Sent Events) istemcisini başlatır ve belirtilen URL'den mesajları dinler.
 func Main() error {
 	var args struct {
-		URL string `arg:"positional,required"`
+		URL string `arg:"positional,required"` // Komut satırından alınacak URL argümanı
 	}
-	arg.MustParse(&args)
+	arg.MustParse(&args) // Argümanları ayrıştır
 
-	client := sse.NewClient(args.URL)
+	client := sse.NewClient(args.URL) // Yeni bir SSE istemcisi oluştur
 	return client.Subscribe("messages", func(msg *sse.Event) {
-		// Got some data!
-		log.Println("received data: ", string(msg.Data))
+		// Veri alındı!
+		log.Println("veri alındı: ", string(msg.Data))
 	})
 }
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.SetFlags(0)
-	err := Main()
+	log.SetOutput(os.Stdout) // Log çıktısını standart çıktıya yönlendir
+	log.SetFlags(0)          // Log formatını ayarla
+	err := Main()            // Main fonksiyonunu çalıştır
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // Hata varsa logla ve çık
 	}
 }

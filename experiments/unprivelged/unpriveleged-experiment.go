@@ -11,6 +11,7 @@ import (
 	"github.com/songgao/water"
 )
 
+// numThreads fonksiyonu, mevcut süreçteki iş parçacığı sayısını döndürür
 func numThreads() int {
 	st, err := os.Stat("/proc/self/task")
 	if err != nil {
@@ -19,6 +20,7 @@ func numThreads() int {
 	return int(st.Sys().(*syscall.Stat_t).Nlink)
 }
 
+// Main fonksiyonu, ana işlevi yerine getirir
 func Main() error {
 	var args struct {
 		Command []string `arg:"positional"`
@@ -29,10 +31,10 @@ func Main() error {
 
 	var err error
 
-	// first we re-exec ourselves in a new user namespace
+	// İlk olarak, kendimizi yeni bir kullanıcı ad alanında yeniden çalıştırıyoruz
 	if os.Args[0] != "/proc/self/exe" {
-		log.Println("re-execing...")
-		// launch a subprocess -- we are already in the network namespace so nothing special here
+		log.Println("Yeniden çalıştırılıyor...")
+		// Alt süreç başlat -- zaten ağ ad alanındayız, bu yüzden burada özel bir şey yok
 		cmd := exec.Command("/proc/self/exe")
 		cmd.Args = append([]string{"/proc/self/exe"}, os.Args[1:]...)
 		cmd.Stdin = os.Stdin
@@ -54,14 +56,14 @@ func Main() error {
 		}
 		err = cmd.Run()
 		if err != nil {
-			return fmt.Errorf("error re-exec'ing ourselves in a new user namespace: %w", err)
+			return fmt.Errorf("kendimizi yeni bir kullanıcı ad alanında yeniden çalıştırma hatası: %w", err)
 		}
 		return nil
 	}
 
-	log.Println("at the inner level, creating a tun device...")
+	log.Println("İç seviyedeyiz, bir tun cihazı oluşturuluyor...")
 
-	// create a tun device in the new namespace
+	// Yeni ad alanında bir tun cihazı oluştur
 	tun, err := water.New(water.Config{
 		DeviceType: water.TUN,
 		PlatformSpecificParams: water.PlatformSpecificParams{
@@ -69,22 +71,22 @@ func Main() error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("error creating tun device: %w", err)
+		return fmt.Errorf("tun cihazı oluşturma hatası: %w", err)
 	}
 
 	_ = tun
 
-	// run a subprocess
-	// set up environment variables for the subprocess
+	// Alt süreç çalıştır
+	// Alt süreç için ortam değişkenlerini ayarla
 	env := append(
 		os.Environ(),
 		"PS1=HTTPTAP # ",
 		"HTTPTAP=1",
 	)
 
-	log.Println("would run:", args.Command)
+	log.Println("Çalıştırılacak komut:", args.Command)
 
-	// launch a subprocess -- we are already in the network namespace so nothing special here
+	// Alt süreç başlat -- zaten ağ ad alanındayız, bu yüzden burada özel bir şey yok
 	cmd := exec.Command(args.Command[0])
 	cmd.Args = args.Command
 	cmd.Stdin = os.Stdin
@@ -93,7 +95,7 @@ func Main() error {
 	cmd.Env = env
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("error starting subprocess: %w", err)
+		return fmt.Errorf("alt süreci başlatma hatası: %w", err)
 	}
 
 	return nil

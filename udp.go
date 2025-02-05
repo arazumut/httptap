@@ -8,7 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// UDP packet
+// UDP paketi
 
 type udpPacket struct {
 	src     net.Addr
@@ -16,9 +16,9 @@ type udpPacket struct {
 	payload []byte
 }
 
-// udpStack parses UDP packets with gopacket and dispatches them through a mux
+// udpStack, gopacket ile UDP paketlerini ayrıştırır ve bunları bir mux üzerinden yönlendirir
 type udpStack struct {
-	toSubprocess chan []byte // data sent to this channel goes to subprocess as raw IPv4 packet
+	toSubprocess chan []byte // bu kanala gönderilen veri, alt sürece ham IPv4 paketi olarak gider
 	buf          gopacket.SerializeBuffer
 	app          *mux
 }
@@ -38,7 +38,7 @@ func (s *udpStack) handlePacket(ipv4 *layers.IPv4, udp *layers.UDP, payload []by
 	}
 
 	replyipv4 := layers.IPv4{
-		Version:  4, // indicates IPv4
+		Version:  4, // IPv4'ü belirtir
 		TTL:      ttl,
 		Protocol: layers.IPProtocolUDP,
 		SrcIP:    ipv4.DstIP,
@@ -51,7 +51,7 @@ func (s *udpStack) handlePacket(ipv4 *layers.IPv4, udp *layers.UDP, payload []by
 		ipv4header: &replyipv4,
 	}
 
-	// forward the data to application-level listeners
+	// veriyi uygulama seviyesindeki dinleyicilere ilet
 	verbosef("got %d udp bytes to %v:%v, delivering to application", len(udp.Payload), ipv4.DstIP, udp.DstPort)
 
 	src := net.UDPAddr{IP: ipv4.SrcIP, Port: int(udp.SrcPort)}
@@ -59,7 +59,7 @@ func (s *udpStack) handlePacket(ipv4 *layers.IPv4, udp *layers.UDP, payload []by
 	s.app.notifyUDP(&w, &udpPacket{&src, &dst, payload})
 }
 
-// serializeUDP serializes a UDP packet
+// serializeUDP, bir UDP paketini serileştirir
 func serializeUDP(ipv4 *layers.IPv4, udp *layers.UDP, payload []byte, tmp gopacket.SerializeBuffer) ([]byte, error) {
 	opts := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -68,16 +68,16 @@ func serializeUDP(ipv4 *layers.IPv4, udp *layers.UDP, payload []byte, tmp gopack
 
 	tmp.Clear()
 
-	// each layer is *prepended*, treating the current buffer data as payload
+	// her katman *önceden* eklenir, mevcut tampon veriyi yük olarak kabul eder
 	p, err := tmp.AppendBytes(len(payload))
 	if err != nil {
-		return nil, fmt.Errorf("error appending TCP payload to packet (%d bytes): %w", len(payload), err)
+		return nil, fmt.Errorf("error appending UDP payload to packet (%d bytes): %w", len(payload), err)
 	}
 	copy(p, payload)
 
 	err = udp.SerializeTo(tmp, opts)
 	if err != nil {
-		return nil, fmt.Errorf("error serializing TCP part of packet: %w", err)
+		return nil, fmt.Errorf("error serializing UDP part of packet: %w", err)
 	}
 
 	err = ipv4.SerializeTo(tmp, opts)
@@ -88,13 +88,13 @@ func serializeUDP(ipv4 *layers.IPv4, udp *layers.UDP, payload []byte, tmp gopack
 	return tmp.Bytes(), nil
 }
 
-// summarizeUDP summarizes a UDP packet into a single line for logging
+// summarizeUDP, bir UDP paketini loglama için tek bir satırda özetler
 func summarizeUDP(ipv4 *layers.IPv4, udp *layers.UDP, payload []byte) string {
 	return fmt.Sprintf("UDP %v:%d => %v:%d - Len %d",
 		ipv4.SrcIP, udp.SrcPort, ipv4.DstIP, udp.DstPort, len(udp.Payload))
 }
 
-// udpStackResponder writes UDP packets back to a known sender
+// udpStackResponder, UDP paketlerini bilinen bir göndericiye geri yazar
 type udpStackResponder struct {
 	stack      *udpStack
 	udpheader  *layers.UDP
@@ -118,29 +118,29 @@ func (r *udpStackResponder) SetDestPort(port uint16) {
 }
 
 func (r *udpStackResponder) Write(payload []byte) (int, error) {
-	// set checksums and lengths
+	// checksum ve uzunlukları ayarla
 	r.udpheader.SetNetworkLayerForChecksum(r.ipv4header)
 
-	// log
+	// logla
 	verbosef("sending udp packet to subprocess: %s", summarizeUDP(r.ipv4header, r.udpheader, payload))
 
-	// serialize the data
+	// veriyi serileştir
 	packet, err := serializeUDP(r.ipv4header, r.udpheader, payload, r.stack.buf)
 	if err != nil {
 		return 0, fmt.Errorf("error serializing UDP packet: %w", err)
 	}
 
-	// make a copy because the same buffer will be re-used
+	// aynı tampon yeniden kullanılacağı için bir kopya oluştur
 	cp := make([]byte, len(packet))
 	copy(cp, packet)
 
-	// send to the subprocess channel non-blocking
+	// alt sürece kanala bloklamadan gönder
 	select {
 	case r.stack.toSubprocess <- cp:
 	default:
 		return 0, fmt.Errorf("channel for sending udp to subprocess would have blocked")
 	}
 
-	// return number of bytes passed in, not number of bytes sent to output
+	// gönderilen bayt sayısını değil, iletilen bayt sayısını döndür
 	return len(payload), nil
 }

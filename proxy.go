@@ -5,13 +5,13 @@ import (
 	"net"
 )
 
-// proxyTCP proxies data received on one TCP connection to the world, and back the other way.
+// proxyTCP, bir TCP bağlantısında alınan verileri dünyaya ve geri diğer yöne proxyler.
 func proxyTCP(dst string, subprocess net.Conn) {
-	// the connections's "LocalAddr" is actually the address that the other side (the subprocess) was trying
-	// to reach, so that's the address we dial in order to proxy
+	// bağlantının "LocalAddr"ı aslında diğer tarafın (alt süreç) ulaşmaya çalıştığı adres,
+	// bu yüzden proxy yapmak için bu adresi arıyoruz
 	world, err := net.Dial("tcp", dst)
 	if err != nil {
-		// TODO: report errors not related to destination being unreachable
+		// TODO: hedefin ulaşılamaz olmasıyla ilgili olmayan hataları raporla
 		subprocess.Close()
 		return
 	}
@@ -20,25 +20,25 @@ func proxyTCP(dst string, subprocess net.Conn) {
 	go proxyBytes(world, subprocess)
 }
 
-// proxyBytes copies data between the world and the subprocess
+// proxyBytes, dünya ile alt süreç arasında veri kopyalar
 func proxyBytes(w io.Writer, r io.Reader) {
 	buf := make([]byte, 1<<20)
 	for {
 		n, err := r.Read(buf)
 		if err == io.EOF {
-			// how to indicate to outside world that we're done?
+			// dış dünyaya bittiğimizi nasıl bildirebiliriz?
 			return
 		}
 		if err != nil {
-			// how to indicate to outside world that the read failed?
-			errorf("error reading in proxyBytes: %v, abandoning", err)
+			// dış dünyaya okumanın başarısız olduğunu nasıl bildirebiliriz?
+			errorf("proxyBytes içinde okuma hatası: %v, bırakılıyor", err)
 			return
 		}
 
-		// send packet to channel, drop on failure
+		// paketi kanala gönder, başarısızlık durumunda bırak
 		_, err = w.Write(buf[:n])
 		if err != nil {
-			errorf("error writing in proxyBytes: %v, dropping %d bytes", err, n)
+			errorf("proxyBytes içinde yazma hatası: %v, %d bayt bırakılıyor", err, n)
 		}
 	}
 }

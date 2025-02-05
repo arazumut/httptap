@@ -16,56 +16,51 @@ import (
 
 func Main() error {
 	var args struct {
-		Interface string `arg:"positional,required"`
-		Remote    string `arg:"positional,required"`
-		Count     int    `default:"2"`
+		Arayüz  string `arg:"positional,required"`
+		Uzak    string `arg:"positional,required"`
+		Sayı    int    `default:"2"`
 	}
 	arg.MustParse(&args)
 
-	// packetsource, err := afpacket.NewTPacket(afpacket.OptInterface(args.Interface))
-	// if err != nil {
-	// 	return nil
-	// }
-
-	iface, err := net.InterfaceByName(args.Interface)
+	// Arayüzü al
+	iface, err := net.InterfaceByName(args.Arayüz)
 	if err != nil {
 		return err
 	}
 
-	// packet.Raw means listen for raw IP packets (requires root permissions)
-	// unix.ETH_P_ALL means listen for all packets
-	conn, err := packet.Listen(iface, packet.Raw, unix.ETH_P_ALL, nil)
+	// Ham IP paketlerini dinle (root yetkisi gerektirir)
+	conn, err := packet.Listen(iface, packet.Raw, packet.All nil)
 	if err != nil {
 		if errors.Is(err, unix.EPERM) {
-			return fmt.Errorf("you need root permissions to read raw packets (%w)", err)
+			return fmt.Errorf("ham paketleri okumak için root yetkisine ihtiyacınız var (%w)", err)
 		}
-		return fmt.Errorf("error listening for raw packet: %w", err)
+		return fmt.Errorf("ham paket dinlerken hata: %w", err)
 	}
 
-	// set promiscuous mode so that we see everything
+	// Promiscuous modu ayarla, böylece her şeyi görebiliriz
 	err = conn.SetPromiscuous(true)
 	if err != nil {
-		return fmt.Errorf("error setting raw packet connection to promiscuous mode: %w", err)
+		return fmt.Errorf("ham paket bağlantısını promiscuous moda ayarlarken hata: %w", err)
 	}
 
-	// write a udp packet
-	udpconn, err := net.Dial("udp", args.Remote)
+	// UDP paketi gönder
+	udpconn, err := net.Dial("udp", args.Uzak)
 	if err != nil {
-		return fmt.Errorf("error dialing %v: %w", args.Remote, err)
+		return fmt.Errorf("bağlanırken hata %v: %w", args.Uzak, err)
 	}
-	udpconn.Write([]byte("hello from udp-experiment..."))
+	udpconn.Write([]byte("udp-deneyi'nden merhaba..."))
 
-	// read a packet
+	// Paket oku
 	buf := make([]byte, iface.MTU)
-	for i := 0; i < args.Count; i++ {
+	for i := 0; i < args.Sayı; i++ {
 		n, srcmac, err := conn.ReadFrom(buf)
 		if err != nil {
-			return fmt.Errorf("error reading raw packet: %w", err)
+			return fmt.Errorf("ham paket okurken hata: %w", err)
 		}
 		_ = srcmac
 
-		// decode with gopacket
-		log.Printf("read %d bytes", n)
+		// gopacket ile decode et
+		log.Printf("%d bayt okundu", n)
 		packet := gopacket.NewPacket(buf[:n], layers.LayerTypeIPv4, gopacket.NoCopy)
 		log.Println(packet.Dump())
 	}

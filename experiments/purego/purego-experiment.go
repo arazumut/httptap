@@ -12,20 +12,20 @@ const (
 	OPENSSL_INIT_ADD_ALL_DIGESTS = 0x00000008
 )
 
-func Main() error {
+func AnaFonksiyon() error {
 	libcrypto, err := purego.Dlopen("libcrypto.so", purego.RTLD_NOW|purego.RTLD_GLOBAL)
 	if err != nil {
 		return err
 	}
 
-	var X509_get_default_cert_dir_env func() string
-	var X509_get_default_cert_dir func() string
+	var VarsayılanSertifikaDizinOrtamDeğişkeni func() string
+	var VarsayılanSertifikaDizini func() string
 
-	purego.RegisterLibFunc(&X509_get_default_cert_dir_env, libcrypto, "X509_get_default_cert_dir_env")
-	purego.RegisterLibFunc(&X509_get_default_cert_dir, libcrypto, "X509_get_default_cert_dir")
+	purego.RegisterLibFunc(&VarsayılanSertifikaDizinOrtamDeğişkeni, libcrypto, "X509_get_default_cert_dir_env")
+	purego.RegisterLibFunc(&VarsayılanSertifikaDizini, libcrypto, "X509_get_default_cert_dir")
 
-	log.Println(X509_get_default_cert_dir_env())
-	log.Println(X509_get_default_cert_dir())
+	log.Println(VarsayılanSertifikaDizinOrtamDeğişkeni())
+	log.Println(VarsayılanSertifikaDizini())
 
 	return nil
 }
@@ -33,7 +33,7 @@ func Main() error {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := AnaFonksiyon()
 	if err != nil {
 		log.Fatal(err)
 	}

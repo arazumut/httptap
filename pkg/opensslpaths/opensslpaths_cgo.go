@@ -10,10 +10,10 @@ import (
 	"github.com/ebitengine/purego"
 )
 
-// Purego provides a way to load external libraries without cgo, but it causes those
-// executables to be dynamically linked to libc, which defeats the purpose a bit.
-// Here we use it only when CGO is enabled because what we are using it for is loading
-// dynamic libraries and falling back to default behavior when they are not found.
+// Purego, cgo olmadan harici kütüphaneleri yüklemenin bir yolunu sağlar,
+// ancak bu, bu yürütülebilir dosyaların libc'ye dinamik olarak bağlanmasına neden olur,
+// bu da amacını biraz bozar. Burada, yalnızca CGO etkinleştirildiğinde kullanıyoruz çünkü
+// kullandığımız şey, dinamik kütüphaneleri yüklemek ve bulunamadıklarında varsayılan davranışa geri dönmektir.
 
 var libcrypto = sync.OnceValue[*libcryptoFuncs](func() *libcryptoFuncs {
 	defer recover()

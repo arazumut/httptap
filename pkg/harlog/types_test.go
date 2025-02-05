@@ -7,88 +7,87 @@ import (
 )
 
 func TestTime_MarshalJSON(t *testing.T) {
-
+	// Zaman dilimini yükle
 	tz, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Test senaryoları
 	tests := []struct {
-		name    string
-		t       Time
-		want    string
-		wantErr bool
+		isim           string
+		zaman          Time
+		beklenen       string
+		hataBekleniyor bool
 	}{
 		{
-			name:    "plain",
-			t:       Time(time.Date(2019, 10, 2, 12, 16, 30, 50, tz)),
-			want:    `"2019-10-02T12:16:30+09:00"`,
-			wantErr: false,
+			isim:           "normal",
+			zaman:          Time(time.Date(2019, 10, 2, 12, 16, 30, 50, tz)),
+			beklenen:       `"2019-10-02T12:16:30+09:00"`,
+			hataBekleniyor: false,
 		},
 		{
-			name:    "zero value",
-			t:       Time(time.Time{}),
-			want:    `null`,
-			wantErr: false,
+			isim:           "sıfır değer",
+			zaman:          Time(time.Time{}),
+			beklenen:       `null`,
+			hataBekleniyor: false,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.t.MarshalJSON()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+		t.Run(tt.isim, func(t *testing.T) {
+			sonuc, err := tt.zaman.MarshalJSON()
+			if (err != nil) != tt.hataBekleniyor {
+				t.Errorf("MarshalJSON() hata = %v, hataBekleniyor %v", err, tt.hataBekleniyor)
 				return
 			}
-			if !reflect.DeepEqual(string(got), tt.want) {
-				t.Errorf("MarshalJSON() got = %v, want %v", string(got), tt.want)
+			if !reflect.DeepEqual(string(sonuc), tt.beklenen) {
+				t.Errorf("MarshalJSON() sonuc = %v, beklenen %v", string(sonuc), tt.beklenen)
 			}
 		})
 	}
 }
 
 func TestTime_UnmarshalJSON(t *testing.T) {
-
-	// NOTE float64 - int64 の変換が生じるのでnsecレベルで誤差がでるのはしょうがない
-
+	// Zaman dilimini yükle
 	tz, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	type args struct {
-		data string
+	type argümanlar struct {
+		veri string
 	}
 	tests := []struct {
-		name    string
-		t       args
-		want    Time
-		wantErr bool
+		isim           string
+		argüman        argümanlar
+		beklenen       Time
+		hataBekleniyor bool
 	}{
 		{
-			name: "plain",
-			t: args{
-				data: `"2019-10-02T12:16:31+09:00"`,
+			isim: "normal",
+			argüman: argümanlar{
+				veri: `"2019-10-02T12:16:31+09:00"`,
 			},
-			want:    Time(time.Date(2019, 10, 2, 12, 16, 31, 0, tz)),
-			wantErr: false,
+			beklenen:       Time(time.Date(2019, 10, 2, 12, 16, 31, 0, tz)),
+			hataBekleniyor: false,
 		},
 		{
-			name: "null",
-			t: args{
-				data: `null`,
+			isim: "null",
+			argüman: argümanlar{
+				veri: `null`,
 			},
-			want:    Time(time.Time{}),
-			wantErr: false,
+			beklenen:       Time(time.Time{}),
+			hataBekleniyor: false,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.isim, func(t *testing.T) {
 			var v Time
-			if err := v.UnmarshalJSON([]byte(tt.t.data)); (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			if err := v.UnmarshalJSON([]byte(tt.argüman.veri)); (err != nil) != tt.hataBekleniyor {
+				t.Errorf("UnmarshalJSON() hata = %v, hataBekleniyor %v", err, tt.hataBekleniyor)
 			}
-			if !time.Time(v).Equal(time.Time(tt.want)) {
-				t.Errorf("UnmarshalJSON() got = %v, want %v", v, tt.want)
+			if !time.Time(v).Equal(time.Time(tt.beklenen)) {
+				t.Errorf("UnmarshalJSON() sonuc = %v, beklenen %v", v, tt.beklenen)
 			}
 		})
 	}
@@ -96,67 +95,67 @@ func TestTime_UnmarshalJSON(t *testing.T) {
 
 func TestDuration_MarshalJSON(t *testing.T) {
 	tests := []struct {
-		name    string
-		d       Duration
-		want    string
-		wantErr bool
+		isim           string
+		süre           Duration
+		beklenen       string
+		hataBekleniyor bool
 	}{
 		{
-			name:    "plain",
-			d:       Duration(10 * time.Millisecond),
-			want:    "10",
-			wantErr: false,
+			isim:           "normal",
+			süre:           Duration(10 * time.Millisecond),
+			beklenen:       "10",
+			hataBekleniyor: false,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.d.MarshalJSON()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+		t.Run(tt.isim, func(t *testing.T) {
+			sonuc, err := tt.süre.MarshalJSON()
+			if (err != nil) != tt.hataBekleniyor {
+				t.Errorf("MarshalJSON() hata = %v, hataBekleniyor %v", err, tt.hataBekleniyor)
 				return
 			}
-			if !reflect.DeepEqual(string(got), tt.want) {
-				t.Errorf("MarshalJSON() got = %v, want %v", string(got), tt.want)
+			if !reflect.DeepEqual(string(sonuc), tt.beklenen) {
+				t.Errorf("MarshalJSON() sonuc = %v, beklenen %v", string(sonuc), tt.beklenen)
 			}
 		})
 	}
 }
 
 func TestDuration_UnmarshalJSON(t *testing.T) {
-	type args struct {
-		data string
+	type argümanlar struct {
+		veri string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    Duration
-		wantErr bool
+		isim           string
+		argüman        argümanlar
+		beklenen       Duration
+		hataBekleniyor bool
 	}{
 		{
-			name: "plain",
-			args: args{
-				data: "10",
+			isim: "normal",
+			argüman: argümanlar{
+				veri: "10",
 			},
-			want:    Duration(10 * time.Millisecond),
-			wantErr: false,
+			beklenen:       Duration(10 * time.Millisecond),
+			hataBekleniyor: false,
 		},
 		{
-			name: "null",
-			args: args{
-				data: `null`,
+			isim: "null",
+			argüman: argümanlar{
+				veri: `null`,
 			},
-			want:    Duration(0),
-			wantErr: false,
+			beklenen:       Duration(0),
+			hataBekleniyor: false,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.isim, func(t *testing.T) {
 			var v Duration
-			if err := v.UnmarshalJSON([]byte(tt.args.data)); (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			if err := v.UnmarshalJSON([]byte(tt.argüman.veri)); (err != nil) != tt.hataBekleniyor {
+				t.Errorf("UnmarshalJSON() hata = %v, hataBekleniyor %v", err, tt.hataBekleniyor)
 			}
-			if v != tt.want {
-				t.Errorf("UnmarshalJSON() got = %v, want %v", v, tt.want)
+			if v != tt.beklenen {
+				t.Errorf("UnmarshalJSON() sonuc = %v, beklenen %v", v, tt.beklenen)
 			}
 		})
 	}

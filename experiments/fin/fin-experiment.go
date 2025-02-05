@@ -9,19 +9,18 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
-// this is a TCP server that writes a fixed string and then closes the connection, in order to investigate the
-// behavior of netcat with respect to FIN packets
+// Bu, netcat'in FIN paketleriyle ilgili davranışını araştırmak için sabit bir dize yazan ve ardından bağlantıyı kapatan bir TCP sunucusudur.
 
-func Main() error {
+func Ana() error {
 	var args struct {
-		Addr string `arg:"positional" default:":11223"`
+		Adres string `arg:"positional" default:":11223"`
 	}
 	arg.MustParse(&args)
 
-	log.Printf("listening on %v ...", args.Addr)
-	l, err := net.Listen("tcp", args.Addr)
+	log.Printf("%v adresinde dinleniyor ...", args.Adres)
+	l, err := net.Listen("tcp", args.Adres)
 	if err != nil {
-		return fmt.Errorf("error listening on %v: %w", args.Addr, err)
+		return fmt.Errorf("%v adresinde dinlenirken hata: %w", args.Adres, err)
 	}
 	for {
 		conn, err := l.Accept()
@@ -29,16 +28,16 @@ func Main() error {
 			return err
 		}
 
-		fmt.Fprintln(conn, "hello fin experiment")
+		fmt.Fprintln(conn, "merhaba fin deneyi")
 		conn.Close()
-		log.Printf("accepted and closed a connection from %v", conn.RemoteAddr())
+		log.Printf("%v adresinden bir bağlantı kabul edildi ve kapatıldı", conn.RemoteAddr())
 	}
 }
 
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0)
-	err := Main()
+	err := Ana()
 	if err != nil {
 		log.Fatal(err)
 	}

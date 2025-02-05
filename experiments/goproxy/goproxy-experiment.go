@@ -24,6 +24,11 @@ type FileStream struct {
 	f    *os.File
 }
 
+type fileWriter interface {
+	Write(b []byte) (int, error)
+	Close() error
+}
+
 func NewFileStream(path string) *FileStream {
 	return &FileStream{path, nil}
 }
